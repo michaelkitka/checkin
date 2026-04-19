@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -395,6 +394,14 @@ textarea { resize: vertical; min-height: 80px; }
     <label>9. Anything else you want me to know before our call?</label>
     <textarea id="ans-notes" placeholder="Anything at all..."></textarea>
   </div>
+  <div class="field">
+    <label>10. What day works best for our next 1-on-1 call? (in your timezone)</label>
+    <div id="mc-calltime">
+      <div class="mc-option" onclick="selectMC('calltime',this,'Monday')"><div class="mc-radio"></div><span class="mc-label">Monday</span></div>
+      <div class="mc-option" onclick="selectMC('calltime',this,'Tuesday')"><div class="mc-radio"></div><span class="mc-label">Tuesday</span></div>
+    </div>
+    <input type="text" id="ans-calltime-detail" placeholder="Preferred time and timezone (e.g. 2pm PST)" style="margin-top:8px;" />
+  </div>
   <div id="checkin-error" class="alert alert-danger" style="display:none;"></div>
   <button class="btn-primary" id="submit-btn" onclick="submitCheckin()">Submit check-in</button>
 </div>
@@ -510,7 +517,7 @@ function startCheckin(name) {
   state.scales = {};
   document.getElementById('checkin-title').textContent = 'Hey ' + name.split(' ')[0];
   document.querySelectorAll('.mc-option').forEach(o => o.classList.remove('selected'));
-  ['ans-detail','ans-content','ans-calls','ans-notes'].forEach(id => document.getElementById(id).value = '');
+  ['ans-detail','ans-content','ans-calls','ans-notes','ans-calltime-detail'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('checkin-error').style.display = 'none';
   document.getElementById('submit-btn').disabled = false;
   buildScale('scale-confidence', 'confidence');
@@ -525,6 +532,7 @@ async function submitCheckin() {
   if (!state.answers.stuck) { err.textContent = 'Please select what you are stuck on.'; err.style.display='block'; return; }
   if (!state.scales.clarity) { err.textContent = 'Please rate how clear you are on next steps.'; err.style.display='block'; return; }
   if (!state.answers.need) { err.textContent = 'Please select what you need from Michael this week.'; err.style.display='block'; return; }
+  if (!state.answers.calltime) { err.textContent = 'Please pick a day for our next call.'; err.style.display='block'; return; }
   err.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Submitting...';
@@ -543,7 +551,9 @@ async function submitCheckin() {
         outreach: state.answers.outreach || null,
         clarity: state.scales.clarity,
         needs_from_coach: state.answers.need,
-        notes: document.getElementById('ans-notes').value.trim()
+        notes: document.getElementById('ans-notes').value.trim(),
+        call_day: state.answers.calltime,
+        call_time_detail: document.getElementById('ans-calltime-detail').value.trim()
       })
     });
     if (!res.ok) throw new Error('Failed');
@@ -658,6 +668,7 @@ async function showClientHistory(name) {
       const d = new Date(e.submitted_at);
       const confClass = e.confidence <= 4 ? 'tag-low' : e.confidence <= 7 ? 'tag-mid' : 'tag-high';
       const clarClass = e.clarity <= 4 ? 'tag-low' : e.clarity <= 7 ? 'tag-mid' : 'tag-high';
+      const callDayText = e.call_day ? (e.call_day + (e.call_time_detail ? ' at ' + e.call_time_detail : '')) : 'n/a';
       return `<div class="history-entry">
         <div class="entry-date">Check-in ${entries.length - i} &nbsp;·&nbsp; ${d.toLocaleDateString('en-CA', {weekday:'short',month:'short',day:'numeric',year:'numeric'})}</div>
         <div class="entry-row"><span class="entry-label">Confidence</span><span class="score-pill ${confClass}">${e.confidence}/10</span></div>
@@ -668,6 +679,7 @@ async function showClientHistory(name) {
         <div class="entry-row"><span class="entry-label">Sales calls</span><span class="entry-val">${e.sales_calls || 'n/a'}</span></div>
         <div class="entry-row"><span class="entry-label">Outreach done</span><span class="entry-val">${e.outreach || 'n/a'}</span></div>
         <div class="entry-row"><span class="entry-label">Needs from Michael</span><span class="entry-val">${e.needs_from_coach}</span></div>
+        <div class="entry-row"><span class="entry-label">Next call</span><span class="entry-val">${callDayText}</span></div>
         ${e.notes ? `<div class="entry-row"><span class="entry-label">Notes</span><span class="entry-val">${e.notes}</span></div>` : ''}
       </div>`;
     }).join('');
