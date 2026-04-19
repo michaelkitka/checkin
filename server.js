@@ -57,6 +57,8 @@ app.post('/api/checkins', async (req, res) => {
       clarity: entry.clarity,
       needs_from_coach: entry.needs_from_coach,
       notes: entry.notes || null,
+      call_day: entry.call_day || null,
+      call_time_detail: entry.call_time_detail || null,
       submitted_at: new Date().toISOString()
     }])
     .select()
@@ -75,12 +77,15 @@ app.post('/api/checkins', async (req, res) => {
           client_name: entry.client_name,
           confidence: entry.confidence,
           stuck_on: entry.stuck_on,
+          detail: entry.detail,
           clarity: entry.clarity,
           needs_from_coach: entry.needs_from_coach,
           content_posts: entry.content_posts,
           sales_calls: entry.sales_calls,
           outreach: entry.outreach,
           notes: entry.notes,
+          call_day: entry.call_day,
+          call_time_detail: entry.call_time_detail,
           submitted_at: new Date().toISOString()
         })
       });
