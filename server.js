@@ -14,7 +14,8 @@ const supabase = createClient(
 );
 
 const COACH_PASSWORD = process.env.COACH_PASSWORD || 'firstchoice';
-const ZAPIER_WEBHOOK_URL = process.env.ZAPIER_WEBHOOK_URL || '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'michaelkitka@gmail.com';
 
 // Get all clients
 app.get('/api/clients', async (req, res) => {
@@ -66,31 +67,51 @@ app.post('/api/checkins', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  // Fire Zapier webhook if configured
-  if (ZAPIER_WEBHOOK_URL) {
+  // Send email notification via Resend
+  if (RESEND_API_KEY) {
     try {
-      const fetch = require('node-fetch');
-      await fetch(ZAPIER_WEBHOOK_URL, {
+      const subject = `${entry.client_name} has submitted their weekly check in`;
+      const body = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; color: #333;">
+  <h2 style="color: #000;">New Weekly Check-In</h2>
+  <p><strong>Client:</strong> ${entry.client_name}</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />
+  <p><strong>Confidence:</strong> ${entry.confidence}/10</p>
+  <p><strong>Clarity on next steps:</strong> ${entry.clarity}/10</p>
+  <p><strong>Stuck on:</strong> ${entry.stuck_on}</p>
+  ${entry.detail ? `<p><strong>Detail:</strong> ${entry.detail}</p>` : ''}
+  <p><strong>Content posted:</strong> ${entry.content_posts || 'n/a'}</p>
+  <p><strong>Sales calls:</strong> ${entry.sales_calls || 'n/a'}</p>
+  <p><strong>Outreach done:</strong> ${entry.outreach || 'n/a'}</p>
+  <p><strong>Needs from coach:</strong> ${entry.needs_from_coach}</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />
+  <p><strong>Next call day:</strong> ${entry.call_day || 'n/a'}</p>
+  <p><strong>Preferred time:</strong> ${entry.call_time_detail || 'n/a'}</p>
+  ${entry.notes ? `<hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" /><p><strong>Notes:</strong><br/>${entry.notes}</p>` : ''}
+  <p style="color: #999; font-size: 12px; margin-top: 24px;">Submitted at ${new Date().toLocaleString('en-CA', { timeZone: 'America/Vancouver' })} PT</p>
+</div>
+      `.trim();
+
+      const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          client_name: entry.client_name,
-          confidence: entry.confidence,
-          stuck_on: entry.stuck_on,
-          detail: entry.detail,
-          clarity: entry.clarity,
-          needs_from_coach: entry.needs_from_coach,
-          content_posts: entry.content_posts,
-          sales_calls: entry.sales_calls,
-          outreach: entry.outreach,
-          notes: entry.notes,
-          call_day: entry.call_day,
-          call_time_detail: entry.call_time_detail,
-          submitted_at: new Date().toISOString()
+          from: 'First Choice Check-In <onboarding@resend.dev>',
+          to: [NOTIFY_EMAIL],
+          subject: subject,
+          html: body
         })
       });
+
+      if (!emailRes.ok) {
+        const errText = await emailRes.text();
+        console.error('Resend failed:', errText);
+      }
     } catch (e) {
-      console.error('Zapier webhook failed:', e.message);
+      console.error('Email send failed:', e.message);
     }
   }
 
