@@ -87,7 +87,8 @@ label {
 
 input[type=text],
 input[type=password],
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 11px 14px;
   font-size: 15px;
@@ -101,9 +102,19 @@ textarea {
 }
 input[type=text]:focus,
 input[type=password]:focus,
-textarea:focus { border-color: var(--border-hover); }
+textarea:focus,
+select:focus { border-color: var(--border-hover); }
 input::placeholder, textarea::placeholder { color: var(--text-dim); }
 textarea { resize: vertical; min-height: 80px; }
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width%3D'12' height%3D'8' viewBox%3D'0 0 12 8'%3E%3Cpath fill%3D'%23888' d%3D'M6 8L0 0h12z'%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
 
 .scale-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .scale-btn {
@@ -396,10 +407,16 @@ textarea { resize: vertical; min-height: 80px; }
   </div>
   <div class="field">
     <label>10. What day works best for our next 1-on-1 call? (in your timezone)</label>
-    <div id="mc-calltime">
-      <div class="mc-option" onclick="selectMC('calltime',this,'Monday')"><div class="mc-radio"></div><span class="mc-label">Monday</span></div>
-      <div class="mc-option" onclick="selectMC('calltime',this,'Tuesday')"><div class="mc-radio"></div><span class="mc-label">Tuesday</span></div>
-    </div>
+    <select id="ans-calldate">
+      <option value="">Select a day...</option>
+      <option value="Monday">Monday</option>
+      <option value="Tuesday">Tuesday</option>
+      <option value="Wednesday">Wednesday</option>
+      <option value="Thursday">Thursday</option>
+      <option value="Friday">Friday</option>
+      <option value="Saturday">Saturday</option>
+      <option value="Sunday">Sunday</option>
+    </select>
     <input type="text" id="ans-calltime-detail" placeholder="Preferred time and timezone (e.g. 2pm PST)" style="margin-top:8px;" />
   </div>
   <div id="checkin-error" class="alert alert-danger" style="display:none;"></div>
@@ -518,6 +535,7 @@ function startCheckin(name) {
   document.getElementById('checkin-title').textContent = 'Hey ' + name.split(' ')[0];
   document.querySelectorAll('.mc-option').forEach(o => o.classList.remove('selected'));
   ['ans-detail','ans-content','ans-calls','ans-notes','ans-calltime-detail'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ans-calldate').value = '';
   document.getElementById('checkin-error').style.display = 'none';
   document.getElementById('submit-btn').disabled = false;
   buildScale('scale-confidence', 'confidence');
@@ -528,11 +546,12 @@ function startCheckin(name) {
 async function submitCheckin() {
   const err = document.getElementById('checkin-error');
   const btn = document.getElementById('submit-btn');
+  const callDay = document.getElementById('ans-calldate').value;
   if (!state.scales.confidence) { err.textContent = 'Please rate your confidence.'; err.style.display='block'; return; }
   if (!state.answers.stuck) { err.textContent = 'Please select what you are stuck on.'; err.style.display='block'; return; }
   if (!state.scales.clarity) { err.textContent = 'Please rate how clear you are on next steps.'; err.style.display='block'; return; }
   if (!state.answers.need) { err.textContent = 'Please select what you need from Michael this week.'; err.style.display='block'; return; }
-  if (!state.answers.calltime) { err.textContent = 'Please pick a day for our next call.'; err.style.display='block'; return; }
+  if (!callDay) { err.textContent = 'Please pick a day for our next call.'; err.style.display='block'; return; }
   err.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Submitting...';
@@ -552,7 +571,7 @@ async function submitCheckin() {
         clarity: state.scales.clarity,
         needs_from_coach: state.answers.need,
         notes: document.getElementById('ans-notes').value.trim(),
-        call_day: state.answers.calltime,
+        call_day: callDay,
         call_time_detail: document.getElementById('ans-calltime-detail').value.trim()
       })
     });
